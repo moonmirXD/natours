@@ -10,6 +10,14 @@ const handleDuplicateFieldsDB = (err) => {
   const message = `Duplicate field value: ${err.keyValue.name}. Please user another value!`;
   return new AppError(message, 400);
 };
+
+const handleValidationErrorDB = (err) => {
+  const errors = Object.values(err.errors).map((element) => element.message);
+
+  const message = `Invalid input. ${errors.join('. ')}`;
+  return new AppError(message, 400);
+};
+
 const sendErrorDev = (res, err) => {
   res.status(err.statusCode).json({
     status: err.status,
@@ -48,7 +56,9 @@ module.exports = (err, req, res, next) => {
 
     if (error.name === 'CastError') error = handleCastErrorDB(error);
     if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    console.log(error);
+    if (error._message === 'Tour validation failed') {
+      error = handleValidationErrorDB(error);
+    }
     sendErrorProd(res, error);
   }
 
