@@ -6,7 +6,7 @@ const sendEmail = require('../utils/email');
 const catchAsync = require('../utils/catchAsync');
 const User = require('../models/userModel');
 
-const signToken = (id) =>
+const signToken = id =>
   jwt.sign({ id }, process.env.JWT_SECRET_KEY, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
@@ -14,9 +14,7 @@ const signToken = (id) =>
 const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
   const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
-    ),
+    expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
     httpOnly: true,
   };
 
@@ -65,10 +63,7 @@ exports.login = catchAsync(async (req, res, next) => {
 exports.protect = catchAsync(async (req, res, next) => {
   let token;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
   }
 
@@ -76,23 +71,16 @@ exports.protect = catchAsync(async (req, res, next) => {
     return next(new AppError('You are not logged in, please log in!', 401));
   }
 
-  const decoded = await promisify(jwt.verify)(
-    token,
-    process.env.JWT_SECRET_KEY
-  );
+  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET_KEY);
 
   const currentUser = await User.findById(decoded.id);
 
   if (!currentUser) {
-    return next(
-      new AppError('The user belonging this token does no longer exist.', 401)
-    );
+    return next(new AppError('The user belonging this token does no longer exist.', 401));
   }
 
   if (currentUser.changedPasswordAfter(decoded.iat)) {
-    return next(
-      new AppError('User recently changed password. Please login again!', 401)
-    );
+    return next(new AppError('User recently changed password. Please login again!', 401));
   }
 
   req.user = currentUser;
@@ -104,9 +92,7 @@ exports.restrictTo =
   (req, res, next) => {
     console.log(req.user);
     if (!roles.includes(req.user.role)) {
-      return next(
-        new AppError('You do not have permission to perform this action.', 403)
-      );
+      return next(new AppError('You do not have permission to perform this action.', 403));
     }
 
     next();
@@ -122,9 +108,7 @@ exports.forgotPassword = async (req, res, next) => {
   const resetToken = user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
-  const resetURL = `${req.protocol}://${req.get(
-    'host'
-  )}/api/users/resetPassword/${resetToken}`;
+  const resetURL = `${req.protocol}://${req.get('host')}/api/users/resetPassword/${resetToken}`;
 
   const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL} \nIf you didn't forget your password, please ignore this email!`;
 
@@ -145,16 +129,11 @@ exports.forgotPassword = async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    return next(
-      new AppError('There was an error sending an email. Try again later!', 500)
-    );
+    return next(new AppError('There was an error sending an email. Try again later!', 500));
   }
 };
 exports.resetPassword = catchAsync(async (req, res, next) => {
-  const hashedToken = crypto
-    .createHash('sha256')
-    .update(req.params.token)
-    .digest('hex');
+  const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
 
   const user = await User.findOne({
     passwordResetToken: hashedToken,
